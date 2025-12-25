@@ -1,13 +1,3 @@
-<script setup>
-import { useAuthStore } from '../stores/auth'
-import { useTaskStore } from '../stores/tasks'
-import { useRouter } from 'vue-router'
-
-const auth = useAuthStore()
-const taskStore = useTaskStore()
-const router = useRouter()
-</script>
-
 <template>
   <div>
     <div class="mb-8">
@@ -15,7 +5,6 @@ const router = useRouter()
       <p class="text-medium-emphasis text-body-1">Aquí está el resumen de tus sectores hoy.</p>
     </div>
 
-    <!-- Stats Overview -->
     <v-row class="mb-6">
       <v-col cols="12" md="4">
         <v-card class="bg-surface-glass h-100" elevation="4">
@@ -60,7 +49,6 @@ const router = useRouter()
       </v-col>
     </v-row>
 
-    <!-- Recent Urgent Tasks -->
     <v-card class="bg-surface-glass" elevation="4">
         <v-card-title class="d-flex align-center py-4">
             <v-icon start color="warning" class="mr-2">mdi-alert-circle-outline</v-icon>
@@ -94,6 +82,16 @@ const router = useRouter()
     </v-card>
   </div>
 </template>
+
+<script setup>
+import { useAuthStore } from '../stores/auth'
+import { useTaskStore } from '../stores/tasks'
+import { useRouter } from 'vue-router'
+
+const auth = useAuthStore()
+const taskStore = useTaskStore()
+const router = useRouter()
+</script>
 
 <style scoped>
 .text-gradient {
