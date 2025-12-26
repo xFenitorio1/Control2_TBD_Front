@@ -1,6 +1,8 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import api from '../api/axios'
+import { useTaskStore } from '../stores/tasks'
+
+const taskStore = useTaskStore()
 
 // State for analytics data
 const analytics = ref({
@@ -20,57 +22,53 @@ const fetchAnalytics = async () => {
         loading.value = true
         
         // 6.1 Tasks per sector
-        const tasksPerSectorRes = await api.get('/tasks/stats/user-sector')
+        const tasksPerSector = await taskStore.countCompletedTasksByUserAndSector()
         // Transform [sectorName, count] to object
-        if (tasksPerSectorRes.data) {
-            analytics.value.tasksPerSector = tasksPerSectorRes.data.map(item => ({
+        if (tasksPerSector) {
+            analytics.value.tasksPerSector = tasksPerSector.map(item => ({
                 sector: item[0],
                 count: item[1]
             }))
         }
 
         // 6.2 Nearest pending task
-        const nearestTaskRes = await api.get('/tasks/stats/nearest-pending')
-        if (nearestTaskRes.data) {
+        const nearestTask = await taskStore.findNearestPendingTask()
+        if (nearestTask) {
             analytics.value.closestTask = {
-                title: nearestTaskRes.data.title,
+                title: nearestTask.title,
                 // Since the backend query orders by distance but doesn't return it directly in the entity,
                 // we might not have the exact distance without modifying the DTO/Query. 
                 // For now we'll show the sector or just 'Cercana' if distance isn't available.
                 // Or if the backend strictly returns a Task entity, we use what we have.
-                sector: nearestTaskRes.data.sector ? nearestTaskRes.data.sector.name : 'Desconocido',
+                sector: nearestTask.sector ? nearestTask.sector.name : 'Desconocido',
                 distance: 'Distancia calculada en backend' 
             }
         }
 
         // 6.3 Top sector in radius (2km = 2000m)
-        const topSectorRes = await api.get('/tasks/stats/top-sector-in-radius', {
-            params: { radius: 2000 }
-        })
-        if (topSectorRes.data) {
+        const topSector = await taskStore.findTopSectorWithMostCompletedTasksInRadius(2000)
+        if (topSector) {
              // Backend returns just the name string based on the query signature
             analytics.value.topSector2km = {
-                name: topSectorRes.data,
+                name: topSector,
                 count: 'Más frecuente' // Backend query returns name, count logic is internal to ordering
             }
         }
 
         // 6.3 Top sector in radius (5km = 5000m) - reusing logic for "wide area"
-        const topSector5kmRes = await api.get('/tasks/stats/top-sector-in-radius', {
-            params: { radius: 5000 }
-        })
-        if (topSector5kmRes.data) {
+        const topSector5km = await taskStore.findTopSectorWithMostCompletedTasksInRadius(5000)
+        if (topSector5km) {
             analytics.value.topSector5km = {
-                name: topSector5kmRes.data,
+                name: topSector5km,
                 count: 'Más frecuente'
             }
         }
 
         // 6.4 Avg distance
-        const avgDistRes = await api.get('/tasks/stats/avg-distance-completed')
-        if (avgDistRes.data) {
+        const avgDist = await taskStore.calculateAverageDistanceBetweenCompletedTasksAndUser()
+        if (avgDist) {
             // Round to 2 decimals and add 'm'
-            analytics.value.avgDistance = `${parseFloat(avgDistRes.data).toFixed(2)}m`
+            analytics.value.avgDistance = `${parseFloat(avgDist).toFixed(2)}m`
         }
 
     } catch (err) {
