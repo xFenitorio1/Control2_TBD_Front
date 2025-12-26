@@ -4,18 +4,16 @@ import AppSidebar from './AppSidebar.vue'
 </script>
 
 <template>
-  <v-layout>
-    <AppSidebar />
-    <v-main>
-      <v-container fluid class="pa-6">
-        <RouterView v-slot="{ Component }">
-          <transition name="fade" mode="out-in">
-            <component :is="Component" />
-          </transition>
-        </RouterView>
-      </v-container>
-    </v-main>
-  </v-layout>
+  <AppSidebar />
+  <v-main>
+    <v-container fluid class="pa-6">
+      <RouterView v-slot="{ Component }">
+        <transition name="fade" mode="out-in">
+          <component :is="Component" />
+        </transition>
+      </RouterView>
+    </v-container>
+  </v-main>
 </template>
 
 <style scoped>
