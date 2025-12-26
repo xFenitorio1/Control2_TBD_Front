@@ -11,6 +11,7 @@ export const useTaskStore = defineStore('tasks', () => {
             if (response.data) {
                 tasks.value = response.data
             }
+            console.log("fetching tasks", tasks.value)
         } catch (error) {
             console.error('Error fetching tasks:', error)
         }
@@ -86,7 +87,7 @@ export const useTaskStore = defineStore('tasks', () => {
 
     async function changeStatus(id, newStatusBoolean) {
         try {
-            // Sending the boolean directly as body
+
             const response = await api.put(`/tasks/status/${id}`, newStatusBoolean, {
                 headers: { 'Content-Type': 'application/json' }
             })
