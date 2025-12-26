@@ -142,6 +142,67 @@ export const useTaskStore = defineStore('tasks', () => {
         }
     }
 
+    async function getNotification() {
+        try {
+            const response = await api.get('/tasks/notificateExpiringTasks')
+            return response.data
+        } catch (error) {
+            console.error('Error fetching notifications:', error)
+            return []
+        }
+    }
+
+    async function getByStatusAndKeyword(status, keyword) {
+        try {
+            const response = await api.get('/tasks/getByStatusAndKeyword', { params: { status, keyword } })
+            return response.data
+        } catch (error) {
+            console.error('Error fetching tasks by status and keyword:', error)
+            return []
+        }
+    }
+
+    // Stats Endpoints
+    async function countCompletedTasksByUserAndSector() {
+        try {
+            const response = await api.get('/tasks/stats/user-sector')
+            return response.data
+        } catch (error) {
+            console.error('Error fetching user sector stats:', error)
+            return []
+        }
+    }
+
+    async function findNearestPendingTask() {
+        try {
+            const response = await api.get('/tasks/stats/nearest-pending')
+            return response.data
+        } catch (error) {
+            console.error('Error fetching nearest pending task:', error)
+            return null
+        }
+    }
+
+    async function findTopSectorWithMostCompletedTasksInRadius(radius) {
+        try {
+            const response = await api.get('/tasks/stats/top-sector-in-radius', { params: { radius } })
+            return response.data
+        } catch (error) {
+            console.error('Error fetching top sector stats:', error)
+            return []
+        }
+    }
+
+    async function calculateAverageDistanceBetweenCompletedTasksAndUser() {
+        try {
+            const response = await api.get('/tasks/stats/avg-distance-completed')
+            return response.data
+        } catch (error) {
+            console.error('Error fetching average distance stats:', error)
+            return null
+        }
+    }
+
     const pendingTasks = computed(() => tasks.value.filter(t => t.status === 'PENDING'))
     const completedTasks = computed(() => tasks.value.filter(t => t.status === 'COMPLETED')) // Ensure backend returns string status or we map it
 
@@ -158,6 +219,12 @@ export const useTaskStore = defineStore('tasks', () => {
         findTasksUser,
         findTaskActive,
         findTaskComplete,
+        getNotification,
+        getByStatusAndKeyword,
+        countCompletedTasksByUserAndSector,
+        findNearestPendingTask,
+        findTopSectorWithMostCompletedTasksInRadius,
+        calculateAverageDistanceBetweenCompletedTasksAndUser,
         pendingTasks,
         completedTasks
     }
