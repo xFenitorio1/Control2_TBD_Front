@@ -1,28 +1,88 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import api from '../api/axios'
 
-// Mock Data answering the questions
+// State for analytics data
 const analytics = ref({
-    tasksPerSector: [
-        { sector: 'Control de Tráfico', count: 12 },
-        { sector: 'Parques', count: 8 },
-        { sector: 'Calles', count: 5 }
-    ],
-    closestTask: {
-        title: 'Reparar Bache',
-        distance: '450m',
-        sector: 'Calles'
-    },
-    topSector2km: {
-        name: 'Control de Tráfico',
-        count: 5
-    },
-    avgDistance: '1.2km',
-    topSector5km: {
-        name: 'Parques',
-        count: 15
-    },
-    avgDistanceCompleted: '0.8km'
+    tasksPerSector: [],
+    closestTask: null,
+    topSector2km: null,
+    avgDistance: '0m',
+    topSector5km: null,
+    avgDistanceCompleted: '0m'
+})
+
+const loading = ref(true)
+const error = ref(null)
+
+const fetchAnalytics = async () => {
+    try {
+        loading.value = true
+        
+        // 6.1 Tasks per sector
+        const tasksPerSectorRes = await api.get('/tasks/stats/user-sector')
+        // Transform [sectorName, count] to object
+        if (tasksPerSectorRes.data) {
+            analytics.value.tasksPerSector = tasksPerSectorRes.data.map(item => ({
+                sector: item[0],
+                count: item[1]
+            }))
+        }
+
+        // 6.2 Nearest pending task
+        const nearestTaskRes = await api.get('/tasks/stats/nearest-pending')
+        if (nearestTaskRes.data) {
+            analytics.value.closestTask = {
+                title: nearestTaskRes.data.title,
+                // Since the backend query orders by distance but doesn't return it directly in the entity,
+                // we might not have the exact distance without modifying the DTO/Query. 
+                // For now we'll show the sector or just 'Cercana' if distance isn't available.
+                // Or if the backend strictly returns a Task entity, we use what we have.
+                sector: nearestTaskRes.data.sector ? nearestTaskRes.data.sector.name : 'Desconocido',
+                distance: 'Distancia calculada en backend' 
+            }
+        }
+
+        // 6.3 Top sector in radius (2km = 2000m)
+        const topSectorRes = await api.get('/tasks/stats/top-sector-in-radius', {
+            params: { radius: 2000 }
+        })
+        if (topSectorRes.data) {
+             // Backend returns just the name string based on the query signature
+            analytics.value.topSector2km = {
+                name: topSectorRes.data,
+                count: 'Más frecuente' // Backend query returns name, count logic is internal to ordering
+            }
+        }
+
+        // 6.3 Top sector in radius (5km = 5000m) - reusing logic for "wide area"
+        const topSector5kmRes = await api.get('/tasks/stats/top-sector-in-radius', {
+            params: { radius: 5000 }
+        })
+        if (topSector5kmRes.data) {
+            analytics.value.topSector5km = {
+                name: topSector5kmRes.data,
+                count: 'Más frecuente'
+            }
+        }
+
+        // 6.4 Avg distance
+        const avgDistRes = await api.get('/tasks/stats/avg-distance-completed')
+        if (avgDistRes.data) {
+            // Round to 2 decimals and add 'm'
+            analytics.value.avgDistance = `${parseFloat(avgDistRes.data).toFixed(2)}m`
+        }
+
+    } catch (err) {
+        console.error('Error fetching analytics:', err)
+        error.value = 'No se pudieron cargar las analíticas.'
+    } finally {
+        loading.value = false
+    }
+}
+
+onMounted(() => {
+    fetchAnalytics()
 })
 </script>
 
@@ -33,18 +93,24 @@ const analytics = ref({
         <p class="text-medium-emphasis">Información de tus datos geoespaciales</p>
     </div>
 
-    <v-row>
+    <!-- Error/Loading states -->
+    <v-alert v-if="error" type="error" class="mb-4">{{ error }}</v-alert>
+    <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-4"></v-progress-linear>
+
+    <v-row v-if="!loading && !error">
+        <!-- 6.1 Stats -->
         <v-col cols="12" md="6" lg="3">
             <v-card class="h-100 bg-surface-glass" elevation="4">
                 <v-card-title class="text-subtitle-1 text-medium-emphasis">Tareas por Sector</v-card-title>
                 <v-card-text>
-                    <div v-for="item in analytics.tasksPerSector" :key="item.sector" class="mb-3">
+                    <div v-if="analytics.tasksPerSector.length === 0" class="text-caption text-medium-emphasis">No hay datos</div>
+                    <div v-else v-for="item in analytics.tasksPerSector" :key="item.sector" class="mb-3">
                         <div class="d-flex justify-space-between text-body-2 mb-1">
                             <span>{{ item.sector }}</span>
                             <span class="font-weight-bold">{{ item.count }}</span>
                         </div>
                         <v-progress-linear
-                            :model-value="item.count * 5"
+                            :model-value="item.count * 10" 
                             color="primary"
                             height="8"
                             rounded
@@ -54,6 +120,7 @@ const analytics = ref({
             </v-card>
         </v-col>
 
+        <!-- 6.2 Nearest -->
         <v-col cols="12" md="6" lg="3">
             <v-card class="h-100 bg-surface-glass" elevation="4">
                 <v-card-title class="d-flex align-center text-subtitle-1">
@@ -61,13 +128,19 @@ const analytics = ref({
                     Tarea Pendiente Más Cercana
                 </v-card-title>
                 <v-card-text class="text-center pt-8">
-                    <div class="text-h2 font-weight-bold mb-2">{{ analytics.closestTask.distance }}</div>
-                    <div class="text-body-1 font-weight-medium">"{{ analytics.closestTask.title }}"</div>
-                    <div class="text-caption text-medium-emphasis">en {{ analytics.closestTask.sector }}</div>
+                    <div v-if="analytics.closestTask">
+                        <!-- Backend doesn't return distance in the Task entity, so we simplify display -->
+                        <div class="text-h5 font-weight-bold mb-2">{{ analytics.closestTask.title }}</div>
+                         <div class="text-caption text-medium-emphasis">en {{ analytics.closestTask.sector }}</div>
+                    </div>
+                    <div v-else class="text-caption text-medium-emphasis">
+                        No hay tareas pendientes cercanas
+                    </div>
                 </v-card-text>
             </v-card>
         </v-col>
 
+        <!-- 6.3 Radius 2km -->
         <v-col cols="12" md="6" lg="3">
             <v-card class="h-100 bg-surface-glass" elevation="4">
                 <v-card-title class="d-flex align-center text-subtitle-1">
@@ -75,39 +148,51 @@ const analytics = ref({
                     Top Sector (Radio 2km)
                 </v-card-title>
                 <v-card-text class="text-center pt-8">
-                    <div class="text-h4 font-weight-bold text-secondary mb-2">{{ analytics.topSector2km.name }}</div>
-                    <div class="text-body-2 text-medium-emphasis">
-                        {{ analytics.topSector2km.count }} tareas completadas cerca
+                    <div v-if="analytics.topSector2km">
+                        <div class="text-h4 font-weight-bold text-secondary mb-2">{{ analytics.topSector2km.name }}</div>
+                        <div class="text-body-2 text-medium-emphasis">
+                             Sector con más actividad
+                        </div>
+                    </div>
+                    <div v-else class="text-body-2 text-medium-emphasis">
+                        Sin datos en rango
                     </div>
                 </v-card-text>
             </v-card>
         </v-col>
 
+        <!-- 6.4 Avg Distance -->
         <v-col cols="12" md="6" lg="3">
             <v-card class="h-100 bg-surface-glass" elevation="4">
                 <v-card-title class="d-flex align-center text-subtitle-1">
-                     <v-icon start color="success">mdi-trending-up</v-icon>
-                     Distancia Promedio
+                    <v-icon start color="success">mdi-trending-up</v-icon>
+                    Distancia Promedio
                 </v-card-title>
                 <v-card-text class="text-center pt-8">
                      <div class="text-h2 font-weight-bold text-success mb-2">{{ analytics.avgDistance }}</div>
                      <div class="text-caption text-medium-emphasis">
-                        Desde tu ubicación registrada a tareas completadas
+                        Entre usuario y tareas completadas
                     </div>
                 </v-card-text>
             </v-card>
         </v-col>
 
+        <!-- 6.3 Radius 5km -->
         <v-col cols="12" md="6" lg="3">
             <v-card class="h-100 bg-surface-glass" elevation="4">
                 <v-card-title class="d-flex align-center text-subtitle-1">
-                     <v-icon start color="warning">mdi-map-marker-radius</v-icon>
-                     Top Sector (Radio 5km)
+                    <v-icon start color="warning">mdi-map-marker-radius</v-icon>
+                    Top Sector (Radio 5km)
                 </v-card-title>
                 <v-card-text class="text-center pt-8">
-                     <div class="text-h4 font-weight-bold text-warning mb-2">{{ analytics.topSector5km.name }}</div>
-                     <div class="text-body-2 text-medium-emphasis">
-                        {{ analytics.topSector5km.count }} tareas en área amplia
+                    <div v-if="analytics.topSector5km">
+                         <div class="text-h4 font-weight-bold text-warning mb-2">{{ analytics.topSector5km.name }}</div>
+                         <div class="text-body-2 text-medium-emphasis">
+                            Sector predominante en área amplia
+                        </div>
+                    </div>
+                    <div v-else class="text-body-2 text-medium-emphasis">
+                        Sin datos en rango
                     </div>
                 </v-card-text>
             </v-card>
