@@ -84,6 +84,7 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useTaskStore } from '../stores/tasks'
 import { useRouter } from 'vue-router'
@@ -91,12 +92,16 @@ import { useRouter } from 'vue-router'
 const auth = useAuthStore()
 const taskStore = useTaskStore()
 const router = useRouter()
+
+onMounted(() => {
+    taskStore.getAllTasks()
+})
 </script>
 
 <style scoped>
 .text-gradient {
   background: linear-gradient(to right, #94a3b8, #ffffff);
-  -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 

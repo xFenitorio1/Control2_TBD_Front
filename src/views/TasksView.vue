@@ -118,11 +118,15 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useTaskStore } from '../stores/tasks'
 import MapPicker from '../components/MapPicker.vue'
 
 const taskStore = useTaskStore()
+
+onMounted(() => {
+    taskStore.getAllTasks()
+})
 
 const filterStatus = ref('ALL')
 const searchQuery = ref('')
@@ -163,22 +167,35 @@ function openCreateModal() {
 function openEditModal(task) {
   isEditing.value = true
   editingId.value = task.id
-  form.value = { ...task }
+  const { latitude, longitude, location, ...rest } = task
+  
+  form.value = { 
+      ...rest,
+      location: location || (latitude && longitude ? { lat: latitude, lng: longitude } : null)
+  }
   showModal.value = true
 }
 
-function saveTask() {
+async function saveTask() {
+    const payload = { ...form.value }
+    
+    if (payload.location) {
+        payload.latitude = payload.location.lat
+        payload.longitude = payload.location.lng
+        delete payload.location
+    }
+
     if (isEditing.value) {
-        taskStore.updateTask({ ...form.value, id: editingId.value })
+        await taskStore.updateTask({ ...payload, id: editingId.value })
     } else {
-        taskStore.addTask(form.value)
+        await taskStore.createTask(payload)
     }
     showModal.value = false
 }
 
-function deleteTask(id) {
+async function deleteTask(id) {
     if(confirm('¿Estás seguro de que deseas eliminar esta tarea?')) {
-        taskStore.deleteTask(id)
+        await taskStore.deleteTask(id)
     }
 }
 </script>

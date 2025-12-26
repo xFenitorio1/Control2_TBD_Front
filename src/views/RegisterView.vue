@@ -20,6 +20,15 @@
           ></v-text-field>
 
           <v-text-field
+            v-model="email"
+            label="Correo Electrónico"
+            prepend-inner-icon="mdi-email"
+            variant="outlined"
+            density="comfortable"
+            class="mb-2"
+          ></v-text-field>
+
+          <v-text-field
             v-model="password"
             label="Contraseña"
             type="password"
@@ -80,17 +89,21 @@ const auth = useAuthStore()
 const router = useRouter()
 
 const username = ref('')
+const email = ref('')
 const password = ref('')
 const location = ref(null)
 const error = ref('')
 
-function handleRegister() {
+async function handleRegister() {
   if (!location.value) {
       error.value = "Por favor selecciona tu ubicación en el mapa"
       return
   }
   
-  if (auth.register(username.value, password.value, location.value)) {
+  // Extract lat/lng
+  const { lat, lng } = location.value
+
+  if (await auth.register(username.value, password.value, email.value, lat, lng)) {
     router.push('/login')
   } else {
     error.value = 'Error en el registro'
@@ -110,6 +123,7 @@ function handleRegister() {
 
 .text-gradient {
   background: linear-gradient(to right, #06b6d4, #8b5cf6);
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }

@@ -11,9 +11,9 @@
       <v-card-text>
         <v-form @submit.prevent="handleLogin">
           <v-text-field
-            v-model="username"
-            label="Usuario"
-            prepend-inner-icon="mdi-account"
+            v-model="email"
+            label="Correo Electrónico"
+            prepend-inner-icon="mdi-email"
             variant="outlined"
             density="comfortable"
             class="mb-2"
@@ -68,12 +68,12 @@ import { useRouter } from 'vue-router'
 const auth = useAuthStore()
 const router = useRouter()
 
-const username = ref('')
+const email = ref('')
 const password = ref('')
 const error = ref('')
 
-function handleLogin() {
-  if (auth.login(username.value, password.value)) {
+async function handleLogin() {
+  if (await auth.login(email.value, password.value)) {
     router.push('/')
   } else {
     error.value = 'Credenciales inválidas'
@@ -93,7 +93,7 @@ function handleLogin() {
 
 .text-gradient {
   background: linear-gradient(to right, #8b5cf6, #06b6d4);
-  -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 </style>
