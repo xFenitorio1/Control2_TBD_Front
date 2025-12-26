@@ -50,7 +50,7 @@
                 {{ task.status === true ? 'PENDIENTE' : 'COMPLETADA' }}
               </v-chip>
               <div>
-                <v-btn icon size="small" variant="text" @click="taskStore.toggleStatus(task.id)" :color="task.status === false ? 'success' : ''">
+                <v-btn icon size="small" variant="text" @click="handleTaskStatus(task)" :color="task.status === false ? 'success' : ''">
                     <v-icon>{{ task.status === false ? 'mdi-check-circle' : 'mdi-circle-outline' }}</v-icon>
                 </v-btn>
                 <v-btn icon size="small" variant="text" @click="openEditModal(task)">
@@ -233,8 +233,6 @@ function openEditModal(task) {
   isEditing.value = true
   editingId.value = task.id_task || task.id
   
-  // Resolve Sector ID from nested object
-  // Schema: { id_sector: 3, name: '...' }
   let resolvedSectorId = null;
   if (task.sector && typeof task.sector === 'object') {
       resolvedSectorId = task.sector.id_sector || task.sector.id;
@@ -242,8 +240,6 @@ function openEditModal(task) {
       resolvedSectorId = task.sector;
   }
   
-  // Resolve Category ID from nested object
-  // Schema: { id_category: 1, name: '...' }
   let resolvedCategoryId = null;
   if (task.category && typeof task.category === 'object') {
       resolvedCategoryId = task.category.id_category || task.category.id;
@@ -251,8 +247,6 @@ function openEditModal(task) {
       resolvedCategoryId = task.category;
   }
 
-  // Parse Date (expirationDate: "2026-01-24T15:15:32.280+00:00")
-  // Input type="date" expects YYYY-MM-DD
   let mappedDate = '';
   if (task.expirationDate) {
       mappedDate = task.expirationDate.split('T')[0];
@@ -260,7 +254,6 @@ function openEditModal(task) {
       mappedDate = task.dueDate.split('T')[0];
   }
 
-  // Location Mapping
   let mappedLocation = null;
   if (task.location) {
       if (task.location.coordinates && Array.isArray(task.location.coordinates)) {
@@ -290,31 +283,18 @@ function openEditModal(task) {
 async function submitTask() {
     console.log('submitTask called');
     
-    // Format date
-    // User provided format: 2026-01-08 (YYYY-MM-DD)
-    // Desired: ISO 8601 "YYYY-MM-DDTHH:mm:ss.SSSZ" or with offset
     let formattedDate = null;
     if (form.value.dueDate) {
-        // Create date object from the date string strings are parsed as UTC usually for YYYY-MM-DD
-        // But we want to preserve the day. Let's create it and set time to end of day or keep current time?
-        // User's previous attempt had current time. Let's stick to that but valid ISO.
         const now = new Date();
         const datePart = form.value.dueDate;
         
-        // Construct ISO string manually to ensure local time matches selected date + current time
-        // Or simply:
         const d = new Date(`${datePart}T${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}.${String(now.getMilliseconds()).padStart(3, '0')}`);
         
-        // However, converting to ISOString() will shift to UTC. checking backend requirements.
-        // Backend showed: 2026-01-24T15:15:32.280+00:00 (UTC/Z implicit).
-        // Let's send a full ISO string.
-        formattedDate = d.toISOString(); // e.g., 2026-01-08T15:30:00.000Z
+        formattedDate = d.toISOString();
     }
 
-    // Resolve IDs
     let finalSectorId = form.value.sectorId;
     if (typeof finalSectorId === 'string') {
-         // Fallback lookups
          const s = sectorStore.sectors.find(s => s.name === finalSectorId);
          finalSectorId = s ? (s.id_sector || s.id) : null;
     }
@@ -325,7 +305,6 @@ async function submitTask() {
         finalCategoryId = c ? (c.id_category || c.id) : null;
     }
 
-    // Location GeoJSON & Flat Fields
     let locationGeoJSON = null;
     let lat = null;
     let lng = null;
@@ -364,6 +343,15 @@ async function submitTask() {
 async function deleteTask(id) {
     if(confirm('¿Estás seguro de que deseas eliminar esta tarea?')) {
         await taskStore.deleteTask(id)
+    }
+}
+
+async function handleTaskStatus(task) {
+    const id = task.id_task || task.id;
+    if (task.status === true) { // Pending -> Complete it
+        await taskStore.completeTask(id)
+    } else { // Completed -> Pending (Toggle)
+        await taskStore.toggleStatus(id)
     }
 }
 </script>

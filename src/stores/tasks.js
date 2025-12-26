@@ -21,7 +21,7 @@ export const useTaskStore = defineStore('tasks', () => {
         try {
             const response = await api.post('/tasks', task)
             if (response.data) {
-                tasks.value.push(response.data)
+                await getAllTasks()
                 return true
             }
         } catch (error) {
@@ -34,7 +34,7 @@ export const useTaskStore = defineStore('tasks', () => {
         try {
             const response = await api.put(`/tasks/${updatedTask.id}`, updatedTask)
             if (response.data) {
-                const index = tasks.value.findIndex(t => t.id === updatedTask.id)
+                const index = tasks.value.findIndex(t => (t.id_task || t.id) === updatedTask.id)
                 if (index !== -1) {
                     tasks.value[index] = response.data
                 }
@@ -49,7 +49,7 @@ export const useTaskStore = defineStore('tasks', () => {
     async function deleteTask(id) {
         try {
             await api.put(`/tasks/delete/${id}`)
-            tasks.value = tasks.value.filter(t => t.id !== id)
+            tasks.value = tasks.value.filter(t => (t.id_task || t.id) !== id)
             return true
         } catch (error) {
             console.error('Error deleting task:', error)
@@ -58,18 +58,19 @@ export const useTaskStore = defineStore('tasks', () => {
     }
 
     async function toggleStatus(id) {
-        const task = tasks.value.find(t => t.id === id)
+        const task = tasks.value.find(t => (t.id_task || t.id) === id)
         if (task) {
             return await changeStatus(id, !task.status)
         }
     }
 
     async function completeTask(id) {
+        console.log('Completing task with ID:', id);
         try {
             const response = await api.put(`/tasks/completeTask/${id}`)
             if (response.data) {
                 // Update local state
-                const index = tasks.value.findIndex(t => t.id === id)
+                const index = tasks.value.findIndex(t => (t.id_task || t.id) === id)
                 if (index !== -1) {
                     tasks.value[index] = response.data
                 }
@@ -88,7 +89,7 @@ export const useTaskStore = defineStore('tasks', () => {
                 headers: { 'Content-Type': 'application/json' }
             })
             if (response.data) {
-                const index = tasks.value.findIndex(t => t.id === id)
+                const index = tasks.value.findIndex(t => (t.id_task || t.id) === id)
                 if (index !== -1) {
                     tasks.value[index] = response.data
                 }
