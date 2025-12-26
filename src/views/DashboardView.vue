@@ -41,7 +41,7 @@
               <v-icon color="white" size="32">mdi-map-marker-multiple</v-icon>
             </v-avatar>
             <div>
-              <div class="text-h4 font-weight-bold">2</div>
+              <div class="text-h4 font-weight-bold">{{ sectorStore.sectors.length }}</div>
               <div class="text-caption text-medium-emphasis text-uppercase font-weight-bold">Sectores Activos</div>
             </div>
           </v-card-text>
@@ -71,7 +71,7 @@
                     </template>
                     
                     <v-list-item-title class="font-weight-bold">{{ task.title }}</v-list-item-title>
-                    <v-list-item-subtitle>{{ task.sector }} &bull; Vence: {{ task.dueDate }}</v-list-item-subtitle>
+                    <v-list-item-subtitle>{{ task.sector?.name || task.sector }} &bull; Vence: {{ task.dueDate }}</v-list-item-subtitle>
                     
                     <template v-slot:append>
                         <v-btn variant="text" size="small" color="primary" @click="router.push('/tasks')">Ver</v-btn>
@@ -87,14 +87,19 @@
 import { onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useTaskStore } from '../stores/tasks'
+import { useSectorStore } from '../stores/sectors'
 import { useRouter } from 'vue-router'
 
 const auth = useAuthStore()
 const taskStore = useTaskStore()
+const sectorStore = useSectorStore()
 const router = useRouter()
 
-onMounted(() => {
-    taskStore.getAllTasks()
+onMounted(async () => {
+    await Promise.all([
+        taskStore.getAllTasks(),
+        sectorStore.getAllSectors()
+    ])
 })
 </script>
 
