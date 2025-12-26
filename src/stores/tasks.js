@@ -60,11 +60,7 @@ export const useTaskStore = defineStore('tasks', () => {
     async function toggleStatus(id) {
         const task = tasks.value.find(t => t.id === id)
         if (task) {
-            if (task.status === 'PENDING') {
-                return await completeTask(id)
-            } else {
-                return await completeTask(id)
-            }
+            return await changeStatus(id, !task.status)
         }
     }
 
