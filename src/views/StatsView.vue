@@ -41,7 +41,6 @@
                 </v-card-title>
                 <v-card-text class="text-center pt-8">
                     <div v-if="analytics.closestTask">
-                        <!-- Backend doesn't return distance in the Task entity, so we simplify display -->
                         <div class="text-h5 font-weight-bold mb-2">{{ analytics.closestTask.title }}</div>
                          <div class="text-caption text-medium-emphasis">en {{ analytics.closestTask.sector }}</div>
                     </div>
@@ -113,7 +112,7 @@
         <v-col cols="12" md="6" lg="9">
             <v-card class="h-100 bg-surface-glass" elevation="4">
                 <v-card-title>Mapa de Calor de Tareas</v-card-title>
-                <v-card-subtitle>Concentración de tareas pendientes (Simulado)</v-card-subtitle>
+                <v-card-subtitle>Concentración de tareas</v-card-subtitle>
                 <v-card-text>
                     <v-sheet height="300" class="position-relative rounded overflow-hidden border bg-blue-grey-darken-4 mt-2">
                          <div ref="mapContainer" style="width: 100%; height: 100%;"></div>
@@ -150,12 +149,11 @@
                                 <th class="text-left text-medium-emphasis font-weight-bold">Usuario</th>
                                 <th class="text-left text-medium-emphasis font-weight-bold">Sector (Ubicación)</th>
                                 <th class="text-center text-medium-emphasis font-weight-bold">Tareas Completadas</th>
-                                <th class="text-center text-medium-emphasis font-weight-bold">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-if="filteredWorkload.length === 0">
-                                <td colspan="4" class="text-center text-medium-emphasis py-4">
+                                <td colspan="3" class="text-center text-medium-emphasis py-4">
                                     {{ analytics.workloadDistribution && analytics.workloadDistribution.length > 0 ? 'No hay usuarios en este sector' : 'No hay datos disponibles' }}
                                 </td>
                             </tr>
@@ -166,11 +164,6 @@
                                     <v-chip color="info" size="small" variant="flat" class="font-weight-bold">
                                         {{ item.completedTaskCount }}
                                     </v-chip>
-                                </td>
-                                <td class="text-center">
-                                    <v-btn size="small" variant="tonal" color="primary" prepend-icon="mdi-map-search" @click="console.log('Locating user:', item.userName, 'in sector:', item.sectorName)">
-                                        Ver Mapa
-                                    </v-btn>
                                 </td>
                             </tr>
                         </tbody>
@@ -217,15 +210,20 @@ const filteredWorkload = computed(() => {
     return analytics.value.workloadDistribution.filter(item => item.sectorName === selectedSector.value)
 })
 
+const heatmapData = ref([])
+
 const fetchAnalytics = async () => {
     try {
         loading.value = true
         
-        // Fetch sectors and ALL tasks for heatmap
-        await Promise.all([
+        const [_, pendingTasks] = await Promise.all([
             sectorStore.getAllSectors(),
-            taskStore.getAllTasks()
+            taskStore.getPendingTasksBySector()
         ])
+        
+        if (pendingTasks) {
+            heatmapData.value = pendingTasks
+        }
 
         // 6.1 Tasks per sector
         const tasksPerSector = await taskStore.countCompletedTasksByUserAndSector()
@@ -269,7 +267,6 @@ const fetchAnalytics = async () => {
         error.value = 'No se pudieron cargar las analíticas.'
     } finally {
         loading.value = false
-        // Initialize map after DOM is updated and v-if="!loading" is true
         nextTick(() => {
             initMap()
         })
@@ -278,14 +275,13 @@ const fetchAnalytics = async () => {
 
 const initMap = () => {
     if (!mapContainer.value) return
-    
-    // Cleanup if exists
+      
     if (map) {
         map.remove()
         map = null
     }
 
-    // Default center (Santiago approx) or first task
+    // Default center
     const center = [-33.4489, -70.6693] 
     map = L.map(mapContainer.value).setView(center, 12)
 
@@ -295,19 +291,63 @@ const initMap = () => {
         maxZoom: 19
     }).addTo(map)
 
-    // Heatmap data
-    const heatPoints = taskStore.tasks
-        .map(t => {
-            // Check for lat/lng in various possible structures
-            const lat = t.latitude || (t.location ? t.location.y : null)
-            const lng = t.longitude || (t.location ? t.location.x : null)
-            return lat && lng ? [lat, lng, 0.5] : null // 0.5 intensity
-        })
-        .filter(p => p !== null)
+    const heatPoints = []
+    
+    console.log('StatsView: Initializing Heatmap');
+    console.log('Heatmap Data (Pending Tasks):', JSON.parse(JSON.stringify(heatmapData.value)));
+    console.log('Sectors Available:', JSON.parse(JSON.stringify(sectorStore.sectors)));
+
+    heatmapData.value.forEach(item => {
+        const normalizedItemName = item.name_sector.trim();
+        const sector = sectorStore.sectors.find(s => s.name.trim() === normalizedItemName)
+        
+        if (sector) {
+            let location = sector.area || sector.location;
+
+            if (typeof location === 'string') {
+                try {
+                    location = JSON.parse(location);
+                } catch (e) {
+                    console.error(`StatsView: Failed to parse location/area for sector ${sector.name}`, e);
+                    return;
+                }
+            }
+
+            if (location) {
+                let lat, lng;
+                
+                if (location.type === 'Point' && Array.isArray(location.coordinates)) {
+                    lng = location.coordinates[0];
+                    lat = location.coordinates[1];
+                } else if (location.type === 'Polygon' && Array.isArray(location.coordinates)) {
+                    const ring = location.coordinates[0];
+                    if (ring && ring.length > 0) {
+                        let sumLat = 0, sumLng = 0;
+                        ring.forEach(coord => {
+                            sumLng += coord[0];
+                            sumLat += coord[1];
+                        });
+                        lat = sumLat / ring.length;
+                        lng = sumLng / ring.length;
+                    }
+                } else if (location.lat && location.lng) {
+                    lat = location.lat;
+                    lng = location.lng;
+                } else if (sector.latitude && sector.longitude) {
+                     lat = sector.latitude
+                     lng = sector.longitude
+                }
+
+                if (lat && lng) {
+                     const intensity = Math.min(item.pending_tasks / 20, 5.0); 
+                     heatPoints.push([lat, lng, intensity]);
+                }
+            }
+        }
+    })
 
     if (heatPoints.length > 0) {
         L.heatLayer(heatPoints, { radius: 25 }).addTo(map)
-        // Fit bounds if possible
         const bounds = L.latLngBounds(heatPoints.map(p => [p[0], p[1]]))
         map.fitBounds(bounds)
     }

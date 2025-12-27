@@ -102,7 +102,6 @@ onMounted(async () => {
         sectorStore.getAllSectors(),
         taskStore.getExpiringTasks()
     ])
-    // results[2] is the output of getExpiringTasks
     if (results[2]) {
         expiringTasks.value = results[2]
     }

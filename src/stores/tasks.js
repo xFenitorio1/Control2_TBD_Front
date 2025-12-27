@@ -50,10 +50,13 @@ export const useTaskStore = defineStore('tasks', () => {
     }
 
     async function deleteTask(id) {
+        console.log('Deleting task with ID:', id);
         try {
-            await api.put(`/tasks/delete/${id}`)
-            tasks.value = tasks.value.filter(t => (t.id_task || t.id) !== id)
-            return true
+            const response = await api.put(`/tasks/delete/${id}`)
+            if (response.data) {
+                tasks.value = tasks.value.filter(t => (t.id_task || t.id) !== id)
+                return true
+            }
         } catch (error) {
             console.error('Error deleting task:', error)
         }
@@ -233,8 +236,23 @@ export const useTaskStore = defineStore('tasks', () => {
         }
     }
 
+    async function getPendingTasksBySector() {
+        const token = auth.user?.token
+        if (!token) return []
+        try {
+            const response = await api.get('/tasks/pendingTasksBySector', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            console.log("data", response.data)
+            return response.data
+        } catch (error) {
+            console.error('Error fetching pending tasks by sector:', error)
+            return []
+        }
+    }
+
     const pendingTasks = computed(() => tasks.value.filter(t => t.status === 'PENDING'))
-    const completedTasks = computed(() => tasks.value.filter(t => t.status === 'COMPLETED')) // Ensure backend returns string status or we map it
+    const completedTasks = computed(() => tasks.value.filter(t => t.status === 'COMPLETED'))
 
     return {
         tasks,
@@ -256,6 +274,7 @@ export const useTaskStore = defineStore('tasks', () => {
         findNearestPendingTask,
         findTopSectorWithMostCompletedTasksInRadius,
         calculateAverageDistanceBetweenCompletedTasksAndUser,
+        getPendingTasksBySector,
         pendingTasks,
         completedTasks
     }

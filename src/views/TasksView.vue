@@ -37,7 +37,7 @@
     </v-card>
 
     <v-row>
-      <v-col v-for="task in paginatedTasks" :key="task.id" cols="12" md="6" lg="4">
+      <v-col v-for="task in paginatedTasks" :key="task.id_task || task.id" cols="12" md="6" lg="4">
         <v-card class="h-100 bg-surface-glass-card hover-card" elevation="4">
           <v-card-text>
             <div class="d-flex justify-space-between mb-2">
@@ -50,13 +50,10 @@
                 {{ task.status === true ? 'PENDIENTE' : 'COMPLETADA' }}
               </v-chip>
               <div>
-                <v-btn icon size="small" variant="text" @click="taskStore.toggleStatus(task.id)" :color="task.status === false ? 'success' : ''">
+                <v-btn icon size="small" variant="text" @click="taskStore.toggleStatus(task.id_task || task.id)" :color="task.status === false ? 'success' : ''">
                     <v-icon>{{ task.status === false ? 'mdi-check-circle' : 'mdi-circle-outline' }}</v-icon>
                 </v-btn>
-                <v-btn icon size="small" variant="text" @click="openEditModal(task)">
-                    <v-icon>mdi-pencil</v-icon>
-                </v-btn>
-                <v-btn icon size="small" variant="text" color="error" @click="deleteTask(task.id)">
+                <v-btn icon size="small" variant="text" color="error" @click="deleteTask(task.id_task || task.id)">
                     <v-icon>mdi-delete</v-icon>
                 </v-btn>
               </div>
@@ -70,7 +67,7 @@
             <div class="d-flex text-caption text-medium-emphasis">
                <div class="d-flex align-center mr-4">
                  <v-icon start size="small">mdi-calendar</v-icon>
-                 {{ task.dueDate }}
+                 {{ formatDate(task.expirationDate) }}
                </div>
                <div class="d-flex align-center">
                  <v-icon start size="small">mdi-map-marker</v-icon>
@@ -344,6 +341,15 @@ async function deleteTask(id) {
     if(confirm('¿Estás seguro de que deseas eliminar esta tarea?')) {
         await taskStore.deleteTask(id)
     }
+}
+
+function formatDate(dateString) {
+    if (!dateString) return ''
+    const date = new Date(dateString)
+    const day = String(date.getDate()).padStart(2, '0')
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const year = date.getFullYear()
+    return `${day}/${month}/${year}`
 }
 </script>
 
