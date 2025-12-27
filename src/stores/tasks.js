@@ -14,7 +14,7 @@ export const useTaskStore = defineStore('tasks', () => {
             if (response.data) {
                 tasks.value = response.data
             }
-            console.log("fetching tasks", tasks.value)
+
         } catch (error) {
             console.error('Error fetching tasks:', error)
         }
@@ -50,7 +50,7 @@ export const useTaskStore = defineStore('tasks', () => {
     }
 
     async function deleteTask(id) {
-        console.log('Deleting task with ID:', id);
+
         try {
             const response = await api.put(`/tasks/delete/${id}`)
             if (response.data) {
@@ -71,7 +71,7 @@ export const useTaskStore = defineStore('tasks', () => {
     }
 
     async function completeTask(id) {
-        console.log('Completing task with ID:', id);
+
         try {
             const response = await api.put(`/tasks/completeTask/${id}`)
             if (response.data) {
@@ -110,14 +110,14 @@ export const useTaskStore = defineStore('tasks', () => {
     // Alert Controller methods
     async function getExpiringTasks() {
         const token = auth.user?.token
-        console.log(token)
+
         if (!token) return []
 
         try {
             const response = await api.get('/taskAlert/getExpiringTask', {
                 headers: { 'Authorization': `Bearer ${token}` }
             })
-            console.log("Expiring tasks:", response.data)
+
             return response.data
         } catch (error) {
             console.error('Error fetching expiring tasks:', error)
@@ -127,13 +127,13 @@ export const useTaskStore = defineStore('tasks', () => {
 
     async function findTasksUser() {
         const token = auth.user?.token
-        console.log(token)
+
         if (!token) return []
         try {
             const response = await api.get('/taskAlert/UserTask', {
                 headers: { 'Authorization': `Bearer ${token}` }
             })
-            console.log("User tasks:", response.data)
+
             if (response.data) {
                 tasks.value = response.data
             }
@@ -228,7 +228,7 @@ export const useTaskStore = defineStore('tasks', () => {
     async function getWorkloadDistribution() {
         try {
             const response = await api.get('/users/workload')
-            console.log(response.data)
+
             return response.data
         } catch (error) {
             console.error('Error fetching workload distribution:', error)
@@ -243,7 +243,7 @@ export const useTaskStore = defineStore('tasks', () => {
             const response = await api.get('/tasks/pendingTasksBySector', {
                 headers: { 'Authorization': `Bearer ${token}` }
             })
-            console.log("data", response.data)
+
             return response.data
         } catch (error) {
             console.error('Error fetching pending tasks by sector:', error)

@@ -163,9 +163,9 @@ onMounted(async () => {
         sectorStore.getAllSectors(),
         categoryStore.getAllCategories()
     ])
-    console.log('Mounted TasksView. Sectors:', sectorStore.sectors);
-    console.log('Mounted TasksView. Categories:', categoryStore.categories);
-    console.log('Mounted TasksView. Tasks:', taskStore.tasks);
+
+
+
 })
 
 const filterStatus = ref('ALL')
@@ -281,7 +281,7 @@ function openEditModal(task) {
 }
 
 async function submitTask() {
-    console.log('submitTask called');
+
     
     let formattedDate = null;
     if (form.value.dueDate) {
@@ -330,7 +330,7 @@ async function submitTask() {
         longitude: lng
     }
 
-    console.log('Sending Payload:', payload);
+
 
     if (isEditing.value) {
         await taskStore.updateTask({ ...payload, id: editingId.value })

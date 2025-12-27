@@ -293,9 +293,9 @@ const initMap = () => {
 
     const heatPoints = []
     
-    console.log('StatsView: Initializing Heatmap');
-    console.log('Heatmap Data (Pending Tasks):', JSON.parse(JSON.stringify(heatmapData.value)));
-    console.log('Sectors Available:', JSON.parse(JSON.stringify(sectorStore.sectors)));
+
+
+
 
     heatmapData.value.forEach(item => {
         const normalizedItemName = item.name_sector.trim();
