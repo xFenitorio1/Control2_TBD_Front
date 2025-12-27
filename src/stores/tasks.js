@@ -252,6 +252,7 @@ export const useTaskStore = defineStore('tasks', () => {
         getNotification,
         getByStatusAndKeyword,
         countCompletedTasksByUserAndSector,
+        getWorkloadDistribution,
         findNearestPendingTask,
         findTopSectorWithMostCompletedTasksInRadius,
         calculateAverageDistanceBetweenCompletedTasksAndUser,
