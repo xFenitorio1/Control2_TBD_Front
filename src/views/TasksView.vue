@@ -53,6 +53,9 @@
                 <v-btn icon size="small" variant="text" @click="taskStore.toggleStatus(task.id_task || task.id)" :color="task.status === false ? 'success' : ''">
                     <v-icon>{{ task.status === false ? 'mdi-check-circle' : 'mdi-circle-outline' }}</v-icon>
                 </v-btn>
+                <v-btn icon size="small" variant="text" @click="openEditModal(task)">
+                    <v-icon>mdi-pencil</v-icon>
+                </v-btn>
                 <v-btn icon size="small" variant="text" color="error" @click="deleteTask(task.id_task || task.id)">
                     <v-icon>mdi-delete</v-icon>
                 </v-btn>
