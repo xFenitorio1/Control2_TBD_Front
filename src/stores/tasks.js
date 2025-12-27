@@ -1,6 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { useAuthStore } from '../stores/auth'
 import api from '../api/axios'
+
+const auth = useAuthStore()
 
 export const useTaskStore = defineStore('tasks', () => {
     const tasks = ref([])
@@ -102,9 +105,16 @@ export const useTaskStore = defineStore('tasks', () => {
     }
 
     // Alert Controller methods
-    async function getExpiringTasks(criteria) {
+    async function getExpiringTasks() {
+        const token = auth.user?.token
+        console.log(token)
+        if (!token) return []
+
         try {
-            const response = await api.get('/taskAlert/getExpiringTask', { data: criteria })
+            const response = await api.get('/taskAlert/getExpiringTask', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            console.log("Expiring tasks:", response.data)
             return response.data
         } catch (error) {
             console.error('Error fetching expiring tasks:', error)
@@ -112,9 +122,18 @@ export const useTaskStore = defineStore('tasks', () => {
         }
     }
 
-    async function findTasksUser(criteria) {
+    async function findTasksUser() {
+        const token = auth.user?.token
+        console.log(token)
+        if (!token) return []
         try {
-            const response = await api.get('/taskAlert/UserTask', { data: criteria })
+            const response = await api.get('/taskAlert/UserTask', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            console.log("User tasks:", response.data)
+            if (response.data) {
+                tasks.value = response.data
+            }
             return response.data
         } catch (error) {
             console.error('Error fetching user tasks:', error)
@@ -200,6 +219,17 @@ export const useTaskStore = defineStore('tasks', () => {
         } catch (error) {
             console.error('Error fetching average distance stats:', error)
             return null
+        }
+    }
+
+    async function getWorkloadDistribution() {
+        try {
+            const response = await api.get('/users/workload')
+            console.log(response.data)
+            return response.data
+        } catch (error) {
+            console.error('Error fetching workload distribution:', error)
+            return []
         }
     }
 

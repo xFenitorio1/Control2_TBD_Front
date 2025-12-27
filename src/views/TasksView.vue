@@ -50,7 +50,7 @@
                 {{ task.status === true ? 'PENDIENTE' : 'COMPLETADA' }}
               </v-chip>
               <div>
-                <v-btn icon size="small" variant="text" @click="handleTaskStatus(task)" :color="task.status === false ? 'success' : ''">
+                <v-btn icon size="small" variant="text" @click="taskStore.toggleStatus(task.id)" :color="task.status === false ? 'success' : ''">
                     <v-icon>{{ task.status === false ? 'mdi-check-circle' : 'mdi-circle-outline' }}</v-icon>
                 </v-btn>
                 <v-btn icon size="small" variant="text" @click="openEditModal(task)">
@@ -159,7 +159,7 @@ const categoryStore = useCategoryStore()
 
 onMounted(async () => {
     await Promise.all([
-        taskStore.getAllTasks(),
+        taskStore.findTasksUser(),
         sectorStore.getAllSectors(),
         categoryStore.getAllCategories()
     ])
@@ -343,15 +343,6 @@ async function submitTask() {
 async function deleteTask(id) {
     if(confirm('¿Estás seguro de que deseas eliminar esta tarea?')) {
         await taskStore.deleteTask(id)
-    }
-}
-
-async function handleTaskStatus(task) {
-    const id = task.id_task || task.id;
-    if (task.status === true) { // Pending -> Complete it
-        await taskStore.completeTask(id)
-    } else { // Completed -> Pending (Toggle)
-        await taskStore.toggleStatus(id)
     }
 }
 </script>

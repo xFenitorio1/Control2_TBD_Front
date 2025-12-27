@@ -56,13 +56,13 @@
         </v-card-title>
         
         <v-card-text class="pb-2">
-            <div v-if="taskStore.pendingTasks.length === 0" class="text-center py-8 text-medium-emphasis font-italic">
-                No hay tareas pendientes. ¡Buen trabajo!
+            <div v-if="expiringTasks.length === 0" class="text-center py-8 text-medium-emphasis font-italic">
+                No hay tareas urgentes próximas a vencer.
             </div>
             <v-list v-else bg-color="transparent">
                 <v-list-item
-                    v-for="task in taskStore.pendingTasks.slice(0, 3)" 
-                    :key="task.id"
+                    v-for="task in expiringTasks.slice(0, 3)" 
+                    :key="task.id_task || task.id"
                     class="mb-2 rounded-lg bg-surface-light"
                     rounded
                 >
@@ -71,7 +71,7 @@
                     </template>
                     
                     <v-list-item-title class="font-weight-bold">{{ task.title }}</v-list-item-title>
-                    <v-list-item-subtitle>{{ task.sector?.name || task.sector }} &bull; Vence: {{ task.dueDate }}</v-list-item-subtitle>
+                    <v-list-item-subtitle>{{ task.description }} &bull; Vence: {{ new Date(task.expirationDate).toLocaleDateString() }}</v-list-item-subtitle>
                     
                     <template v-slot:append>
                         <v-btn variant="text" size="small" color="primary" @click="router.push('/tasks')">Ver</v-btn>
@@ -84,7 +84,7 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useTaskStore } from '../stores/tasks'
 import { useSectorStore } from '../stores/sectors'
@@ -94,12 +94,18 @@ const auth = useAuthStore()
 const taskStore = useTaskStore()
 const sectorStore = useSectorStore()
 const router = useRouter()
+const expiringTasks = ref([])
 
 onMounted(async () => {
-    await Promise.all([
+    const results = await Promise.all([
         taskStore.getAllTasks(),
-        sectorStore.getAllSectors()
+        sectorStore.getAllSectors(),
+        taskStore.getExpiringTasks()
     ])
+    // results[2] is the output of getExpiringTasks
+    if (results[2]) {
+        expiringTasks.value = results[2]
+    }
 })
 </script>
 
